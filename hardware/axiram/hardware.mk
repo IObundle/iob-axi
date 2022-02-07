@@ -4,6 +4,6 @@ ifneq (axiram,$(filter axiram, $(HW_MODULES)))
 HW_MODULES+=axiram
 
 # Sources
-VSRC+=$(AXI_DIR)/submdules/V_AXI/rtl/axiram.v
+VSRC+=$(AXI_DIR)/submdules/V_AXI/rtl/axi_ram.v
 
 endif
