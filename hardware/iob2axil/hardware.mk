@@ -4,6 +4,6 @@ ifneq (iob2axil,$(filter iob2axil, $(HW_MODULES)))
 HW_MODULES+=iob2axil
 
 # Sources
-VSRC+=$(LIB_DIR)/hardware/iob2axil/iob2axil.v
+VSRC+=$(AXI_DIR)/hardware/iob2axil/iob2axil.v
 
 endif
