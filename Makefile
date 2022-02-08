@@ -26,7 +26,7 @@ endif
 VSRC+=$(MODULE_DIR)/$(MODULE_NAME)_tb.v
 
 # AXI RAM
-VSRC+=$(AXI_DIR)/submodules/AXI_MEM/rtl/axi_ram.v
+VSRC+=$(AXI_DIR)/submodules/V_AXI/rtl/axi_ram.v
 
 sim: exists $(VSRC) $(VHDR)
 	$(VLOG) $(INCLUDE) $(DEFINE) $(VSRC)
