@@ -18,6 +18,7 @@ module iob2axi_wr
     // Control I/F
     //
     input                  run,
+    input [AXI_ADDR_W-1:0] addr,
     input [`AXI_LEN_W-1:0] length,
     output reg             ready,
     output reg             error,
@@ -57,29 +58,29 @@ module iob2axi_wr
    reg                     m_axi_bready_int;
 
    // Control register signals
-   reg [ADDR_W-1:0]        addr_reg;
+   reg [AXI_ADDR_W-1:0]    addr_reg;
    reg [`AXI_LEN_W-1:0]    length_reg;
 
    reg                     s_ready_int;
 
    // Write address
-   assign m_axi_awid = `AXI_ID_W'd0;
+   assign m_axi_awid    = `AXI_ID_W'd0;
    assign m_axi_awvalid = m_axi_awvalid_int;
-   assign m_axi_awaddr = addr_reg;
-   assign m_axi_awlen = length_reg;
-   assign m_axi_awsize = axi_awsize;
+   assign m_axi_awaddr  = addr_reg;
+   assign m_axi_awlen   = length_reg;
+   assign m_axi_awsize  = axi_awsize;
    assign m_axi_awburst = `AXI_BURST_W'd1;
-   assign m_axi_awlock = `AXI_LOCK_W'd0;
+   assign m_axi_awlock  = `AXI_LOCK_W'd0;
    assign m_axi_awcache = `AXI_CACHE_W'd2;
-   assign m_axi_awprot = `AXI_PROT_W'd2;
-   assign m_axi_awqos = `AXI_QOS_W'd0;
+   assign m_axi_awprot  = `AXI_PROT_W'd2;
+   assign m_axi_awqos   = `AXI_QOS_W'd0;
 
    // Write
-   assign m_axi_wid = `AXI_ID_W'd0;
+   assign m_axi_wid    = `AXI_ID_W'd0;
    assign m_axi_wvalid = m_axi_wvalid_int;
-   assign m_axi_wdata = s_wdata;
-   assign m_axi_wstrb = s_wstrb;
-   assign m_axi_wlast = m_axi_wlast_int;
+   assign m_axi_wdata  = s_wdata;
+   assign m_axi_wstrb  = s_wstrb;
+   assign m_axi_wlast  = m_axi_wlast_int;
 
    // Write response
    assign m_axi_bready = m_axi_bready_int;
@@ -102,10 +103,10 @@ module iob2axi_wr
    // Control registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         addr_reg <= {ADDR_W{1'b0}};
+         addr_reg <= {AXI_ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
       end else if (state == ADDR_HS) begin
-         addr_reg <= s_addr;
+         addr_reg <= addr;
          length_reg <= length;
       end
    end
@@ -115,9 +116,9 @@ module iob2axi_wr
    reg                     awvalid_int;
 
    always @(posedge clk, posedge rst) begin
-      if (rst)
-        awvalid_int <= 1'b0;
-      else if (rst_valid_int) begin
+      if (rst) begin
+         awvalid_int <= 1'b0;
+      end else if (rst_valid_int) begin
          awvalid_int <= 1'b1;
       end else if (m_axi_awready) begin
          awvalid_int <= 1'b0;

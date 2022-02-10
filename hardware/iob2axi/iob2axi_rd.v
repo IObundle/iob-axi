@@ -18,6 +18,7 @@ module iob2axi_rd
     // Control I/F
     //
     input                   run,
+    input [AXI_ADDR_W-1:0]  addr,
     input [`AXI_LEN_W-1:0]  length,
     output reg              ready,
     output reg              error,
@@ -54,22 +55,22 @@ module iob2axi_rd
    reg                      m_axi_rready_int;
 
    // Control register signals
-   reg [ADDR_W-1:0]         addr_reg;
+   reg [AXI_ADDR_W-1:0]     addr_reg;
    reg [`AXI_LEN_W-1:0]     length_reg;
 
    reg                      s_ready_int;
 
    // Read address
-   assign m_axi_arid = `AXI_ID_W'd0;
+   assign m_axi_arid    = `AXI_ID_W'd0;
    assign m_axi_arvalid = m_axi_arvalid_int;
-   assign m_axi_araddr = addr_reg;
-   assign m_axi_arlen = length_reg;
-   assign m_axi_arsize = axi_arsize;
+   assign m_axi_araddr  = addr_reg;
+   assign m_axi_arlen   = length_reg;
+   assign m_axi_arsize  = axi_arsize;
    assign m_axi_arburst = `AXI_BURST_W'd1;
-   assign m_axi_arlock = `AXI_LOCK_W'b0;
+   assign m_axi_arlock  = `AXI_LOCK_W'b0;
    assign m_axi_arcache = `AXI_CACHE_W'd2;
-   assign m_axi_arprot = `AXI_PROT_W'd2;
-   assign m_axi_arqos = `AXI_QOS_W'd0;
+   assign m_axi_arprot  = `AXI_PROT_W'd2;
+   assign m_axi_arqos   = `AXI_QOS_W'd0;
 
    // Read
    assign m_axi_rready = m_axi_rready_int;
@@ -101,10 +102,10 @@ module iob2axi_rd
    // Control registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         addr_reg <= {ADDR_W{1'b0}};
+         addr_reg <= {AXI_ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
       end else if (state == ADDR_HS) begin
-         addr_reg <= s_addr;
+         addr_reg <= addr;
          length_reg <= length;
       end
    end
@@ -114,7 +115,7 @@ module iob2axi_rd
 
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-        arvalid_int <= 1'b0;
+         arvalid_int <= 1'b0;
       end else if (rst_valid_int) begin
          arvalid_int <= 1'b1;
       end else if (m_axi_arready) begin
