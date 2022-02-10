@@ -11,15 +11,16 @@ module iob2axi_rd
     parameter AXI_DATA_W = DATA_W
     )
    (
-    input                  clk,
-    input                  rst,
+    input                   clk,
+    input                   rst,
 
     //
     // Control I/F
     //
-    input [`AXI_LEN_W-1:0] length,
-    output reg             ready,
-    output reg             error,
+    input                   run,
+    input [`AXI_LEN_W-1:0]  length,
+    output reg              ready,
+    output reg              error,
 
     //
     // Native Slave I/F
@@ -32,7 +33,6 @@ module iob2axi_rd
     //
     // AXI-4 Full Master Read I/F
     //
-
     `AXI4_M_READ_IF_PORT(m_)
     );
 
@@ -41,28 +41,29 @@ module iob2axi_rd
    localparam ADDR_HS=1'h0, READ=1'h1;
 
    // State signals
-   reg                     state, state_nxt;
+   reg                      state, state_nxt;
 
    // Counter and error signals
-   reg [`AXI_LEN_W-1:0]    counter, counter_nxt;
-   reg                     error_nxt;
+   reg [`AXI_LEN_W-1:0]     counter, counter_nxt;
+   reg                      error_nxt;
 
    // Read ready
-   reg                     ready_nxt;
+   reg                      ready_nxt;
 
-   reg                     m_axi_arvalid_int;
-   reg                     m_axi_rready_int;
+   reg                      m_axi_arvalid_int;
+   reg                      m_axi_rready_int;
 
    // Control register signals
-   reg [`AXI_LEN_W-1:0]    length_reg;
+   reg [ADDR_W-1:0]         addr_reg;
+   reg [`AXI_LEN_W-1:0]     length_reg;
 
-   reg                     s_ready_int;
+   reg                      s_ready_int;
 
    // Read address
-   assign m_axi_arid = `AXI_ID_W'b0;
+   assign m_axi_arid = `AXI_ID_W'd0;
    assign m_axi_arvalid = m_axi_arvalid_int;
-   assign m_axi_araddr = s_addr;
-   assign m_axi_arlen = length;
+   assign m_axi_araddr = addr_reg;
+   assign m_axi_arlen = length_reg;
    assign m_axi_arsize = axi_arsize;
    assign m_axi_arburst = `AXI_BURST_W'd1;
    assign m_axi_arlock = `AXI_LOCK_W'b0;
@@ -73,39 +74,48 @@ module iob2axi_rd
    // Read
    assign m_axi_rready = m_axi_rready_int;
 
+   // Delay registers
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         s_ready <= 1'b0;
+         s_rdata <= {DATA_W{1'd0}};
+      end else begin
+         s_ready <= s_ready_int;
+         s_rdata <= m_axi_rdata;
+      end
+   end
+
    // Counter, error and ready registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          counter <= `AXI_LEN_W'd0;
          error <= 1'b0;
          ready <= 1'b1;
-         s_ready <= 1'b0;
-         s_rdata <= {DATA_W{1'd0}};
       end else begin
          counter <= counter_nxt;
          error <= error_nxt;
          ready <= ready_nxt;
-         s_ready <= s_ready_int;
-         s_rdata <= m_axi_rdata;
       end
    end
 
    // Control registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
+         addr_reg <= {ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
       end else if (state == ADDR_HS) begin
+         addr_reg <= s_addr;
          length_reg <= length;
       end
    end
 
-   wire                    rst_valid_int = (state_nxt == ADDR_HS)? 1'b1: 1'b0;
-   reg                     arvalid_int;
+   wire                     rst_valid_int = (state_nxt == ADDR_HS)? 1'b1: 1'b0;
+   reg                      arvalid_int;
 
    always @(posedge clk, posedge rst) begin
-      if(rst)
+      if (rst) begin
         arvalid_int <= 1'b0;
-      else if (rst_valid_int) begin
+      end else if (rst_valid_int) begin
          arvalid_int <= 1'b1;
       end else if (m_axi_arready) begin
          arvalid_int <= 1'b0;
@@ -144,7 +154,7 @@ module iob2axi_rd
            counter_nxt = `AXI_LEN_W'd0;
            ready_nxt = 1'b1;
 
-           if (s_valid) begin
+           if (run) begin
               m_axi_arvalid_int = 1'b1;
 
               if(m_axi_arready) begin
@@ -162,8 +172,8 @@ module iob2axi_rd
            m_axi_rready_int = s_valid;
 
            if (m_axi_rvalid) begin
-              if (s_valid & counter == length_reg) begin
-                 error_nxt = ~m_axi_rlast;
+              if (counter == length_reg) begin
+                 error_nxt = ~m_axi_rlast | |m_axi_rresp;
 
                  state_nxt = ADDR_HS;
               end

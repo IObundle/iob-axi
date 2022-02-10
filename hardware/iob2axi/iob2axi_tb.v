@@ -26,6 +26,8 @@ module iob2axi_tb;
    //
 
    // Control I/F
+   reg run;
+   reg direction;
    reg [`AXI_LEN_W-1:0] length;
    wire                 iob2axi_ready;
    wire                 error;
@@ -54,6 +56,7 @@ module iob2axi_tb;
       //
       // Init signals
       //
+      run = 0;
       length = 0;
 
       valid = 0;
@@ -80,193 +83,182 @@ module iob2axi_tb;
       //
 
       // Test - 1 write
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
+      while(~iob2axi_ready) begin
+         @(posedge clk) #1;
+      end
 
+      direction = 1;
       length = 0;
+
       addr = 0;
       valid = 1;
       wstrb = 4'hf;
       wdata = 1;
 
-      while(!ready)
-         @(posedge  clk) #1;
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
+
+      while(~ready) begin
+         @(posedge clk) #1;
+      end
 
       wdata = 0;
       valid = 0;
 
-      repeat (4) @(posedge  clk) #1;
-      // Test - 2 writes with delay between
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
+      repeat(4) @(posedge clk) #1;
 
-      length = 1;
-      addr = 4;
-      valid = 1;
-      wdata = 2;
+      // Test - 2 writes in a row
+      while(~iob2axi_ready) begin
+         @(posedge clk) #1;
+      end
 
-      while(!ready)
-         @(posedge  clk) #1;
-
-      wdata = 0;
-      valid = 0;
-
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
-
-      wdata = 3;
-      valid = 1;
-
-      while(!ready)
-         @(posedge  clk) #1;
-
-      wdata = 0;
-      valid = 0;
-
-      // Test - 3 writes in a row
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
-
+      direction = 1;
       length = 2;
+
       addr = 12;
       valid = 1;
       wdata = 4;
 
-      while(!ready)
-         @(posedge  clk) #1;
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
+
+      while(~ready) begin
+         @(posedge clk) #1;
+      end
 
       wdata = 5;
 
-      @(posedge  clk) #1;
-      while(!ready)
-         @(posedge  clk) #1;
+      do begin
+         @(posedge clk) #1;
+      end while(~ready);
 
       wdata = 6;
 
-      @(posedge  clk) #1;
+      do begin
+         @(posedge clk) #1;
+      end while(~ready);
 
       valid = 0;
 
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
+      repeat(5) @(posedge clk) #1;
 
-      // Test - 1 read
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
+      // Test - 3 read
+      while(~iob2axi_ready) begin
+         @(posedge clk) #1;
+      end
 
+      direction = 0;
       length = 0;
+
       addr = 0;
       wstrb = 4'h0;
       valid = 1;
 
-      while(!ready)
-         @(posedge  clk) #1;
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
 
-      if(rdata != 1)
-         $display("Error on read 1, value given: %d\n",rdata);
-
-      valid = 0;
-
-      repeat (4) @(posedge  clk) #1;
-      // Test - 2 reads with delay between
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
-
-      length = 1;
-      addr = 4;
-      valid = 1;
-
-      while(!ready)
-         @(posedge  clk) #1;
-
-      if(rdata != 2)
-         $display("Error on read 2, value given: %d\n",rdata);
-
-      wdata = 0;
-      valid = 0;
-
-      @(posedge  clk) #1;
-      @(posedge  clk) #1;
-
-      valid = 1;
-
-      while(!ready)
-         @(posedge  clk) #1;
-
-      if(rdata != 3)
-         $display("Error on read 3, value given: %d\n",rdata);
+      while(~ready) begin
+         @(posedge clk) #1;
+      end
 
       valid = 0;
 
-      // Test - 3 reads in a row
-      while(!iob2axi_ready)
-         @(posedge  clk) #1;
+      if (rdata != 1) begin
+         $display("Error on read 1, value given: %d\n", rdata);
+      end
 
+      repeat(4) @(posedge clk) #1;
+
+      // Test - 4 reads in a row
+      while(~iob2axi_ready) begin
+         @(posedge clk) #1;
+      end
+
+      direction = 0;
       length = 2;
+
       addr = 12;
       valid = 1;
 
-      while(!ready)
-         @(posedge  clk) #1;
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
 
-      if(rdata != 4)
-         $display("Error on read 4, value given: %d\n",rdata);
+      while(!ready) begin
+         @(posedge clk) #1;
+      end
 
-      @(posedge  clk) #1;
-      while(!ready)
-         @(posedge  clk) #1;
+      if (rdata != 4) begin
+         $display("Error on read 4, value given: %d\n", rdata);
+      end
 
-      if(rdata != 5)
-         $display("Error on read 5, value given: %d\n",rdata);         
+      do begin
+         @(posedge clk) #1;
+      end while(~ready);
 
-      @(posedge  clk) #1;
+      if (rdata != 5) begin
+         $display("Error on read 5, value given: %d\n", rdata);
+      end
 
-      if(rdata != 6)
-         $display("Error on read 6, value given: %d\n",rdata);
+      @(posedge clk) #1;
+
+      if (rdata != 6) begin
+         $display("Error on read 6, value given: %d\n", rdata);
+      end
 
       valid = 0;
 
       $display("INFO: Individual tests completed!");
 
-      repeat (10) @(posedge  clk) #1;
+      repeat(10) @(posedge clk) #1;
 
       // Number from which to start the incremental sequence to initialize the RAM
       seq_ini = 32;
 
       // Write
+      direction = 1;
       length = TEST_SZ-1;
       addr = 32'h4000;
       wstrb = -1;
 
       @(posedge clk) #1;
 
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
+
       valid = 1;
       for (i=0; i < TEST_SZ; i=i+1) begin
          wdata = i+seq_ini;
          do
             @(posedge clk) #1;
-         while(!ready);
+         while(~ready);
       end
       valid = 0;
 
       // Wait an arbitray (5) number of cycles
-      repeat (5) @(posedge clk) #1;
+      repeat(5) @(posedge clk) #1;
 
       // Read
+      direction = 1;
       length = TEST_SZ-1;
       wstrb = 0;
       addr = 32'h4000;
 
       @(posedge clk) #1;
 
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
+
       valid = 1;
       for (i=0; i < TEST_SZ; i=i+1) begin
          do
             @(posedge clk) #1;
-         while(!ready);
+         while(~ready);
 
          if (rdata != i+seq_ini) begin
             $display("ERROR: Test failed! At position %d, data=%h and rdata=%h.", i, i+seq_ini, rdata);
@@ -276,7 +268,7 @@ module iob2axi_tb;
 
       $display("INFO: Test completed successfully!");
 
-      repeat (10) @(posedge clk) #1;
+      repeat(10) @(posedge clk) #1;
 
       $finish;
    end
@@ -292,7 +284,16 @@ module iob2axi_tb;
       .rst      (rst),
 
       //
-      // Native interface
+      // Control I/F
+      //
+      .run(run),
+      .direction(direction),
+      .length(length),
+      .ready(iob2axi_ready),
+      .error(error),
+
+      //
+      // Native slave I/F
       //
       .s_valid(valid),
       .s_addr(addr),
@@ -302,14 +303,7 @@ module iob2axi_tb;
       .s_ready(ready),
 
       //
-      // Control I/F
-      //
-      .length(length),
-      .ready(iob2axi_ready),
-      .error(error),
-
-      //
-      // AXI-4 full master interface
+      // AXI-4 full master I/F
       //
       `AXI4_IF_PORTMAP(m_, ddr_)
       );

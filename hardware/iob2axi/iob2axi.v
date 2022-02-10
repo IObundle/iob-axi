@@ -17,6 +17,8 @@ module iob2axi
     //
     // Control I/F
     //
+    input                  run,
+    input                  direction, // 0 for reading, 1 for writing
     input [`AXI_LEN_W-1:0] length,
     output                 ready,
     output                 error,
@@ -37,15 +39,18 @@ module iob2axi
     output                 s_ready
     );
 
-   // internal wires
-   wire                    s_ready_rd, s_ready_wr;
+   wire                    rd_run, wr_run;
    wire                    rd_ready, wr_ready;
    wire                    rd_error, wr_error;
 
-   // assign outputs
+   wire                    s_ready_rd, s_ready_wr;
+
+   assign wr_run = direction? run: 1'b0;
+   assign rd_run = direction? 1'b0: run;
    assign ready = wr_ready & rd_ready;
-   assign s_ready = |s_wstrb? s_ready_wr: s_ready_rd;
    assign error = rd_error | wr_error;
+
+   assign s_ready = |s_wstrb? s_ready_wr: s_ready_rd;
 
    // AXI Read
    iob2axi_rd
@@ -59,12 +64,13 @@ module iob2axi
       .rst    (rst),
 
       // Control I/F
+      .run    (rd_run),
       .length (length),
       .ready  (rd_ready),
       .error  (rd_error),
 
       // Native Slave I/F
-      .s_valid (s_valid & ~|s_wstrb),
+      .s_valid (s_valid),
       .s_addr  (s_addr),
       .s_rdata (s_rdata),
       .s_ready (s_ready_rd),
@@ -85,12 +91,13 @@ module iob2axi
       .rst     (rst),
 
       // Control I/F
+      .run     (wr_run),
       .length  (length),
       .ready   (wr_ready),
       .error   (wr_error),
 
       // Native Slave I/F
-      .s_valid (s_valid & |s_wstrb),
+      .s_valid (s_valid),
       .s_addr  (s_addr),
       .s_wdata (s_wdata),
       .s_wstrb (s_wstrb),
