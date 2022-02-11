@@ -18,8 +18,8 @@ module iob2axi
     //
     // Control I/F
     //
-    /*input                  run,
-    input                  direction, // 0 for reading, 1 for writing*/
+    //input                  run,
+    input                  direction, // 0 for reading, 1 for writing
     input [AXI_ADDR_W-1:0] addr,
     input [`AXI_LEN_W-1:0] length,
     output                 ready,
@@ -46,7 +46,7 @@ module iob2axi
    wire                    error_rd, error_wr;
 
    wire                    rd_ready, wr_ready;
-   reg                     fifo_ready;
+   wire                    in_fifo_ready, out_fifo_ready;
 
    /*assign run_wr = direction? run: 1'b0;
    assign run_rd = direction? 1'b0: run;*/
@@ -54,23 +54,25 @@ module iob2axi
    assign error = error_rd | error_wr;
 
    assign s_rdata = rd_data;
-   assign s_ready = |s_wstrb? fifo_ready: rd_ready;
+   assign s_ready = |s_wstrb? in_fifo_ready: out_fifo_ready;
 
    //
    // Input FIFO
    //
-   wire                       w_full;
-   wire                       w_en = s_valid & |s_wstrb & ~w_full;
-   wire [DATA_W+DATA_W/8-1:0] w_data = {s_wdata, s_wstrb};
+   wire                       in_fifo_full;
+   wire                       in_fifo_wr = s_valid & |s_wstrb & ~in_fifo_full;
+   wire [DATA_W+DATA_W/8-1:0] in_fifo_wdata = {s_wdata, s_wstrb};
 
-   wire                       r_empty;
-   wire                       r_en = wr_valid & |wr_wstrb;
-   wire [DATA_W+DATA_W/8-1:0] r_data;
+   wire                       in_fifo_empty;
+   wire                       in_fifo_rd = wr_valid & |wr_wstrb;
+   wire [DATA_W+DATA_W/8-1:0] in_fifo_rdata;
 
-   wire [ADDR_W:0]            level;
+   wire [ADDR_W:0]            in_fifo_level;
 
-   assign wr_wdata = r_data[DATA_W/8 +: DATA_W];
-   assign wr_wstrb = r_data[0 +: DATA_W/8];
+   assign wr_wdata = in_fifo_rdata[DATA_W/8 +: DATA_W];
+   assign wr_wstrb = in_fifo_rdata[0 +: DATA_W/8];
+
+   assign in_fifo_ready = ~in_fifo_full;
 
    iob_fifo_sync
      #(
@@ -83,26 +85,55 @@ module iob2axi
       .clk     (clk),
       .rst     (rst),
 
-      .w_en    (w_en),
-      .w_data  (w_data),
-      .w_full  (w_full),
+      .w_en    (in_fifo_wr),
+      .w_data  (in_fifo_wdata),
+      .w_full  (in_fifo_full),
 
-      .r_en    (r_en),
-      .r_data  (r_data),
-      .r_empty (r_empty),
+      .r_en    (in_fifo_rd),
+      .r_data  (in_fifo_rdata),
+      .r_empty (in_fifo_empty),
 
-      .level   (level)
+      .level   (in_fifo_level)
       );
 
-   always @(posedge clk, posedge rst) begin
-      if (rst) begin
-         fifo_ready <= 1'b0;
-      end else if (~w_full) begin
-         fifo_ready <= s_valid;
-      end else begin
-         fifo_ready <= 1'b0;
-      end
-   end
+   //
+   // Output FIFO
+   //
+   wire                       out_fifo_full;
+   wire                       out_fifo_wr = rd_valid & |rd_wstrb & ~out_fifo_full;
+   wire [DATA_W-1:0]          out_fifo_wdata = rd_rdata;
+
+   wire                       out_fifo_empty;
+   wire                       out_fifo_rd = s_valid & ~|s_wstrb;
+   wire [DATA_W-1:0]          out_fifo_rdata;
+
+   wire [ADDR_W:0]            out_fifo_level;
+
+   assign s_rdata = out_fifo_rdata[DATA_W/8 +: DATA_W];
+
+   assign out_fifo_ready = ~out_fifo_full;
+
+   iob_fifo_sync
+     #(
+       .W_DATA_W(DATA_W),
+       .R_DATA_W(DATA_W),
+       .ADDR_W(`AXI_LEN_W)
+       )
+   iob_fifo_sync0
+     (
+      .clk     (clk),
+      .rst     (rst),
+
+      .w_en    (out_fifo_wr),
+      .w_data  (out_fifo_wdata),
+      .w_full  (out_fifo_full),
+
+      .r_en    (out_fifo_rd),
+      .r_data  (out_fifo_rdata),
+      .r_empty (out_fifo_empty),
+
+      .level   (out_fifo_level)
+      );
 
    //
    // Compute first address and burst length for the next data transfer
