@@ -109,7 +109,7 @@ module axil2iob #
            s_axil_wready_int  = ready;
         end
         READ: begin
-           if ((ready| ready_int) & s_axil_rready) begin
+           if ((ready | ready_int) & s_axil_rready) begin
               state_nxt = IDLE;
            end
 

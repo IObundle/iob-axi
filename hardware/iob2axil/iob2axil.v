@@ -64,7 +64,7 @@ module iob2axil #
    reg [1:0]                  state_nxt;
 
    // State register
-   always @(posedge clk) begin
+   always @(posedge clk, posedge rst) begin
       if (rst) begin
          state <= 2'b00;
       end else begin
@@ -75,8 +75,11 @@ module iob2axil #
    wire                       rst_valid_int = (state_nxt == IDLE)? 1'b1: 1'b0;
    reg                        awvalid_int;
    reg                        arvalid_int;
-   always @(posedge clk) begin
-      if (rst_valid_int) begin
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         awvalid_int <= 1'b0;
+         arvalid_int <= 1'b0;
+      end else if (rst_valid_int) begin
          awvalid_int <= 1'b1;
          arvalid_int <= 1'b1;
       end else begin
