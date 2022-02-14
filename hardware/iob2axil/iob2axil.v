@@ -8,8 +8,8 @@ module iob2axil #
    parameter AXIL_DATA_W = 32  // Width of data bus in bits
    )
    (
-    input                     clk,
-    input                     rst,
+    input                        clk,
+    input                        rst,
 
     //
     // AXI-4 lite master interface
@@ -19,25 +19,14 @@ module iob2axil #
     //
     // Native slave interface
     //
-    input                     valid,
-    input [AXIL_ADDR_W-1:0]   addr,
-    input [AXIL_DATA_W-1:0]   wdata,
-    input [AXIL_DATA_W/8-1:0] wstrb,
-    output [AXIL_DATA_W-1:0]  rdata,
-    output reg                ready
+    input                        valid,
+    input [AXIL_ADDR_W-1:0]      addr,
+    input [AXIL_DATA_W-1:0]      wdata,
+    input [AXIL_DATA_W/8-1:0]    wstrb,
+    output reg [AXIL_DATA_W-1:0] rdata,
+    output                       ready
     );
 
-   reg                        m_axil_awvalid_int;
-   reg                        m_axil_arvalid_int;
-   reg                        m_axil_bready_int;
-   reg                        m_axil_rready_int;
-   reg                        m_axil_wvalid_int;
-
-   assign m_axil_awvalid = m_axil_awvalid_int;
-   assign m_axil_arvalid = m_axil_arvalid_int;
-   assign m_axil_bready  = m_axil_bready_int;
-   assign m_axil_rready  = m_axil_rready_int;
-   assign m_axil_wvalid  = m_axil_wvalid_int;
    assign m_axil_awaddr  = addr;
    assign m_axil_araddr  = addr;
    assign m_axil_wdata   = wdata;
@@ -56,92 +45,77 @@ module iob2axil #
    assign m_axil_awqos = `AXI_QOS_W'd0;
    assign m_axil_arqos = `AXI_QOS_W'd0;
 
-   assign rdata = m_axil_rdata;
-
-   localparam IDLE=2'h0, WRITE=2'h1, READ=2'h2, W_RESPONSE=2'h3;
-
-   reg [1:0]                  state;
-   reg [1:0]                  state_nxt;
-
-   // State register
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         state <= 2'b00;
+         rdata <= {AXIL_DATA_W{1'b0}};
       end else begin
-         state <= state_nxt;
+         rdata <= m_axil_rdata;
       end
    end
 
-   wire                       rst_valid_int = (state_nxt == IDLE)? 1'b1: 1'b0;
-   reg                        awvalid_int;
-   reg                        arvalid_int;
+   wire                          wr = valid & |wstrb;
+   wire                          rd = valid & ~|wstrb;
+   reg                           wr_reg, rd_reg;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         awvalid_int <= 1'b0;
-         arvalid_int <= 1'b0;
-      end else if (rst_valid_int) begin
-         awvalid_int <= 1'b1;
-         arvalid_int <= 1'b1;
+         wr_reg <= 1'b0;
+         rd_reg <= 1'b0;
       end else begin
-         if (m_axil_awready) begin
-            awvalid_int <= 1'b0;
-         end
-         if (m_axil_arready) begin
-            arvalid_int <= 1'b0;
-         end
+         wr_reg <= wr;
+         rd_reg <= rd;
       end
    end
 
-   // State machine
-   always @* begin
-      state_nxt = state;
-
-      ready = 1'b0;
-
-      m_axil_awvalid_int = 1'b0;
-      m_axil_arvalid_int = 1'b0;
-      m_axil_bready_int = 1'b0;
-      m_axil_rready_int = 1'b0;
-      m_axil_wvalid_int = 1'b0;
-
-      case (state)
-        IDLE: begin
-           if (valid) begin
-              if (|wstrb) begin
-                 state_nxt = WRITE;
-              end else begin
-                 state_nxt = READ;
-              end
-           end
-        end
-        WRITE: begin
-           if (m_axil_wready) begin
-              state_nxt = W_RESPONSE;
-           end
-
-           ready = m_axil_wready;
-
-           m_axil_awvalid_int = awvalid_int;
-           m_axil_wvalid_int  = 1'b1;
-        end
-        READ: begin
-           if (m_axil_rvalid) begin
-              state_nxt = IDLE;
-           end
-
-           ready = m_axil_rvalid;
-
-           m_axil_arvalid_int = arvalid_int;
-           m_axil_rready_int  = 1'b1;
-        end
-        W_RESPONSE: begin
-           if (m_axil_bvalid) begin
-              state_nxt = IDLE;
-           end
-
-           m_axil_bready_int = 1'b1;
-        end
-      endcase
+   reg                           awvalid_ack;
+   assign m_axil_awvalid = (wr | wr_reg) & ~awvalid_ack;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         awvalid_ack <= 1'b0;
+      end else if (m_axil_awvalid & m_axil_awready) begin
+         awvalid_ack <= 1'b1;
+      end else if (m_axil_wready) begin
+         awvalid_ack <= 1'b0;
+      end
    end
+
+   reg                           wvalid_ack;
+   assign m_axil_wvalid = (wr | wr_reg)  & ~wvalid_ack;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         wvalid_ack <= 1'b0;
+      end else if (m_axil_wvalid & m_axil_wready) begin
+         wvalid_ack <= 1'b1;
+      end else begin
+         wvalid_ack <= 1'b0;
+      end
+   end
+
+   assign m_axil_bready = 1'b1;
+
+   reg                           arvalid_ack;
+   assign m_axil_arvalid = (rd | rd_reg) & ~arvalid_ack;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         arvalid_ack <= 1'b0;
+      end else if (m_axil_arvalid & m_axil_arready) begin
+         arvalid_ack <= 1'b1;
+      end else if (m_axil_rvalid) begin
+         arvalid_ack <= 1'b0;
+      end
+   end
+
+   reg                           rready_ack;
+   assign m_axil_rready = (rd | rd_reg) & ~rready_ack;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         rready_ack <= 1'b0;
+      end else if (m_axil_rvalid & m_axil_rready) begin
+         rready_ack <= 1'b1;
+      end else begin
+         rready_ack <= 1'b0;
+      end
+   end
+
+   assign ready = m_axil_bvalid | rready_ack;
 
 endmodule
