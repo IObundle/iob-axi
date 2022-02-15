@@ -73,7 +73,7 @@ module iob2axil #
          awvalid_ack <= 1'b0;
       end else if (m_axil_awvalid & m_axil_awready) begin
          awvalid_ack <= 1'b1;
-      end else if (m_axil_wready) begin
+      end else if (m_axil_bvalid) begin
          awvalid_ack <= 1'b0;
       end
    end
