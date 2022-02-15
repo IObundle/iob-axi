@@ -18,13 +18,13 @@ module iob2axi_rd
     // Control I/F
     //
     input                   run,
-    input [AXI_ADDR_W-1:0]  addr,
+    input [ADDR_W-1:0]      addr,
     input [`AXI_LEN_W-1:0]  length,
     output reg              ready,
     output reg              error,
 
     //
-    // Native Slave I/F
+    // Native Slave Read I/F
     //
     input                   s_valid,
     input [ADDR_W-1:0]      s_addr,
@@ -55,7 +55,7 @@ module iob2axi_rd
    reg                      m_axi_rready_int;
 
    // Control register signals
-   reg [AXI_ADDR_W-1:0]     addr_reg;
+   reg [ADDR_W-1:0]         addr_reg;
    reg [`AXI_LEN_W-1:0]     length_reg;
 
    reg                      s_ready_int;
@@ -102,7 +102,7 @@ module iob2axi_rd
    // Control registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         addr_reg <= {AXI_ADDR_W{1'b0}};
+         addr_reg <= {ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
       end else if (state == ADDR_HS) begin
          addr_reg <= addr;

@@ -1,7 +1,12 @@
 ifneq (iob2axi,$(filter iob2axi, $(HW_MODULES)))
 
+include $(AXI_DIR)/config.mk
+
 # Add to modules list
 HW_MODULES+=iob2axi
+
+# Submodules
+include $(MEM_DIR)/hardware/fifo/iob_fifo_sync/hardware.mk
 
 # Includes
 INCLUDE+=$(incdir)$(AXI_DIR)/hardware/include

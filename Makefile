@@ -1,4 +1,5 @@
 AXI_DIR:=.
+include ./config.mk
 
 # Default module
 MODULE_NAME ?=iob2axi
@@ -17,6 +18,12 @@ ifeq ($(VCD),1)
 DEFINE+=$(defmacro)VCD
 endif
 
+# Includes
+INCLUDE+=$(incdir)$(LIB_DIR)/hardware/include
+
+# Headers
+VHDR+=$(LIB_DIR)/hardware/include/iob_lib.vh
+
 # Sources
 ifneq ($(MODULE_DIR),)
 include $(MODULE_DIR)/hardware.mk
@@ -26,7 +33,7 @@ endif
 VSRC+=$(MODULE_DIR)/$(MODULE_NAME)_tb.v
 
 # AXI RAM
-VSRC+=$(AXI_DIR)/submodules/V_AXI/rtl/axi_ram.v
+VSRC+=$(V_AXI_DIR)/rtl/axi_ram.v
 
 sim: exists $(VSRC) $(VHDR)
 	$(VLOG) $(INCLUDE) $(DEFINE) $(VSRC)
