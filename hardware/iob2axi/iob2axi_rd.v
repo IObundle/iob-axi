@@ -167,7 +167,7 @@ module iob2axi_rd
         end
         // Read data
         READ: begin
-           s_ready_int = (s_valid & m_axi_rvalid);
+           s_ready_int = s_valid & m_axi_rvalid;
 
            m_axi_arvalid_int = arvalid_int;
            m_axi_rready_int = s_valid;

@@ -60,21 +60,58 @@ module iob2axi
    //
    // Input FIFO
    //
+   wire                       wr_valid_int;
+
    wire                       in_fifo_full;
    wire                       in_fifo_wr = s_valid & |s_wstrb & ~in_fifo_full;
    wire [DATA_W+DATA_W/8-1:0] in_fifo_wdata = {s_wdata, s_wstrb};
 
    wire                       in_fifo_empty;
-   wire                       in_fifo_rd = wr_ready;
+   wire                       in_fifo_rd = wr_valid_int & ~hold_wr & ~m_axi_wlast;
    wire [DATA_W+DATA_W/8-1:0] in_fifo_rdata;
 
    wire [`AXI_LEN_W:0]        in_fifo_level;
 
-   assign wr_valid = ~in_fifo_empty;
-   assign wr_wdata = in_fifo_rdata[DATA_W/8 +: DATA_W];
-   assign wr_wstrb = in_fifo_rdata[0 +: DATA_W/8];
+   wire [DATA_W-1:0]          wr_wdata_int = in_fifo_rdata[DATA_W/8 +: DATA_W];
+   wire [DATA_W/8-1:0]        wr_wstrb_int = in_fifo_rdata[0 +: DATA_W/8];
+   reg [DATA_W-1:0]           wr_wdata_reg;
+   reg [DATA_W/8-1:0]         wr_wstrb_reg;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         wr_wdata_reg <= {DATA_W{1'b0}};
+         wr_wstrb_reg <= {(DATA_W/8){1'b0}};
+      end else if (~hold_wr) begin
+         wr_wdata_reg <= wr_wdata_int;
+         wr_wstrb_reg <= wr_wstrb_int;
+      end
+   end
 
-   assign in_fifo_ready = ~in_fifo_full;
+   assign wr_valid_int = ~ready_wr & ~in_fifo_empty;
+   assign wr_valid = wr_valid_reg;
+   assign wr_wdata = hold_wr? wr_wdata_reg: wr_wdata_int;
+   assign wr_wstrb = hold_wr? wr_wstrb_reg: wr_wstrb_int;
+
+   reg                        wr_valid_reg, wr_valid_reg2;
+   wire                       hold_wr = wr_valid_reg2 & ~wr_ready;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         wr_valid_reg <= 1'b0;
+         wr_valid_reg2 <= 1'b0;
+      end else begin
+         wr_valid_reg <= wr_valid_int;
+         wr_valid_reg2 <= wr_valid_reg;
+      end
+   end
+
+   reg                        in_fifo_ready_int;
+   assign in_fifo_ready = in_fifo_ready_int & ~in_fifo_full;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         in_fifo_ready_int <= 1'b0;
+      end else begin
+         in_fifo_ready_int <= s_valid & |s_wstrb;
+      end
+   end
 
    iob_fifo_sync
      #(
@@ -114,7 +151,16 @@ module iob2axi
    assign rd_valid = ~out_fifo_full;
 
    assign s_rdata = out_fifo_rdata;
-   assign out_fifo_ready = ~out_fifo_empty;
+
+   reg                   out_fifo_ready_int;
+   assign out_fifo_ready = out_fifo_ready_int & ~out_fifo_empty;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         out_fifo_ready_int <= 1'b0;
+      end else begin
+         out_fifo_ready_int <= s_valid & ~|s_wstrb;
+      end
+   end
 
    iob_fifo_sync
      #(
@@ -122,7 +168,7 @@ module iob2axi
        .R_DATA_W(DATA_W),
        .ADDR_W(`AXI_LEN_W)
        )
-   iob_fifo_sync0
+   iob_fifo_sync1
      (
       .clk     (clk),
       .rst     (rst),
@@ -185,7 +231,7 @@ module iob2axi
 
       if (minAddr == addr4k) begin
          //addr_int_next = {{addr_int[ADDR_W-1:12] + 1'b1}, {12{1'b0}}};
-         length_burst = addr_int - addr4k - 1'b1;
+         length_burst = addr4k - addr_int - 1'b1;
       end else begin // minAddr == addrRem
          //addr_int_next = addr_int + length_int;
          length_burst = length_int - 1'b1;

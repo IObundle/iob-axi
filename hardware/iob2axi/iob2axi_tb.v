@@ -2,11 +2,11 @@
 
 `include "axi.vh"
 
-`define CLK_PER 1000
+`define CLK_PER 10
 
 module iob2axi_tb;
 
-   parameter TEST_SZ = 256;
+   parameter TEST_SZ = 1024;
 
    parameter ADDR_W = 24;
    parameter DATA_W = 32;
@@ -28,23 +28,23 @@ module iob2axi_tb;
    // Control I/F
    reg run;
    reg direction;
-   reg [`AXI_LEN_W-1:0] length;
-   wire                 iob2axi_ready;
-   wire                 error;
+   reg [ADDR_W-1:0] start_addr;
+   wire             ready;
+   wire             error;
 
    // Native slave I/F
-   reg                  valid;
-   reg [ADDR_W-1:0]     addr;
-   reg [DATA_W-1:0]     wdata;
-   reg [DATA_W/8-1:0]   wstrb;
-   wire [DATA_W-1:0]    rdata;
-   wire                 ready;
+   reg              s_valid;
+   reg [ADDR_W-1:0] s_addr;
+   reg [DATA_W-1:0] s_wdata;
+   reg [DATA_W/8-1:0] s_wstrb;
+   wire [DATA_W-1:0]  s_rdata;
+   wire               s_ready;
 
    // AXI-4 full master I/F
    `AXI4_IF_WIRE(ddr_);
 
    // Iterators
-   integer               i, seq_ini;
+   integer            i, seq_ini;
 
    initial begin
 
@@ -57,12 +57,13 @@ module iob2axi_tb;
       // Init signals
       //
       run = 0;
-      length = 0;
+      start_addr = 0;
+      direction = 0;
 
-      valid = 0;
-      addr = 0;
-      wdata = 0;
-      wstrb = 0;
+      s_valid = 0;
+      s_addr = 0;
+      s_wdata = 0;
+      s_wstrb = 0;
 
       //
       // Initialize memory
@@ -72,7 +73,7 @@ module iob2axi_tb;
       #100 rst = 1;
 
       // Deassert rst
-      repeat (100) @(posedge clk) #1;
+      repeat (10) @(posedge clk) #1;
       rst = 0;
 
       // Wait an arbitray (10) number of cycles
@@ -82,189 +83,49 @@ module iob2axi_tb;
       // Test starts here
       //
 
-      // Test - 1 write
-      while(~iob2axi_ready) begin
-         @(posedge clk) #1;
-      end
+      // Write test
 
       direction = 1;
-      length = 0;
-
-      addr = 0;
-      valid = 1;
-      wstrb = 4'hf;
-      wdata = 1;
+      start_addr = 'h8000 - 'd10 -'d1;
 
       run = 1;
       @(posedge clk) #1;
       run = 0;
 
-      while(~ready) begin
-         @(posedge clk) #1;
-      end
-
-      wdata = 0;
-      valid = 0;
-
-      repeat(4) @(posedge clk) #1;
-
-      // Test - 2 writes in a row
-      while(~iob2axi_ready) begin
-         @(posedge clk) #1;
-      end
-
-      direction = 1;
-      length = 2;
-
-      addr = 12;
-      valid = 1;
-      wdata = 4;
-
-      run = 1;
-      @(posedge clk) #1;
-      run = 0;
-
-      while(~ready) begin
-         @(posedge clk) #1;
-      end
-
-      wdata = 5;
-
-      do begin
-         @(posedge clk) #1;
-      end while(~ready);
-
-      wdata = 6;
-
-      do begin
-         @(posedge clk) #1;
-      end while(~ready);
-
-      valid = 0;
-
-      repeat(5) @(posedge clk) #1;
-
-      // Test - 3 read
-      while(~iob2axi_ready) begin
-         @(posedge clk) #1;
-      end
-
-      direction = 0;
-      length = 0;
-
-      addr = 0;
-      wstrb = 4'h0;
-      valid = 1;
-
-      run = 1;
-      @(posedge clk) #1;
-      run = 0;
-
-      while(~ready) begin
-         @(posedge clk) #1;
-      end
-
-      valid = 0;
-
-      if (rdata != 1) begin
-         $display("Error on read 1, value given: %d\n", rdata);
-      end
-
-      repeat(4) @(posedge clk) #1;
-
-      // Test - 4 reads in a row
-      while(~iob2axi_ready) begin
-         @(posedge clk) #1;
-      end
-
-      direction = 0;
-      length = 2;
-
-      addr = 12;
-      valid = 1;
-
-      run = 1;
-      @(posedge clk) #1;
-      run = 0;
-
-      while(!ready) begin
-         @(posedge clk) #1;
-      end
-
-      if (rdata != 4) begin
-         $display("Error on read 4, value given: %d\n", rdata);
-      end
-
-      do begin
-         @(posedge clk) #1;
-      end while(~ready);
-
-      if (rdata != 5) begin
-         $display("Error on read 5, value given: %d\n", rdata);
-      end
-
-      @(posedge clk) #1;
-
-      if (rdata != 6) begin
-         $display("Error on read 6, value given: %d\n", rdata);
-      end
-
-      valid = 0;
-
-      $display("INFO: Individual tests completed!");
-
-      repeat(10) @(posedge clk) #1;
+      s_valid = 1;
+      s_wstrb = 4'hf;
 
       // Number from which to start the incremental sequence to initialize the RAM
       seq_ini = 32;
-
-      // Write
-      direction = 1;
-      length = TEST_SZ-1;
-      addr = 32'h4000;
-      wstrb = -1;
-
-      @(posedge clk) #1;
-
-      run = 1;
-      @(posedge clk) #1;
-      run = 0;
-
-      valid = 1;
       for (i=0; i < TEST_SZ; i=i+1) begin
-         wdata = i+seq_ini;
+         s_addr = i;
+         s_wdata = i+seq_ini;
          do
             @(posedge clk) #1;
-         while(~ready);
+         while(~s_ready);
       end
-      valid = 0;
+      s_valid = 0;
 
-      // Wait an arbitray (5) number of cycles
-      repeat(5) @(posedge clk) #1;
+      repeat(4) @(posedge clk) #1;
 
-      // Read
-      direction = 1;
-      length = TEST_SZ-1;
-      wstrb = 0;
-      addr = 32'h4000;
+      // Read test
 
-      @(posedge clk) #1;
+      direction = 0;
 
-      run = 1;
-      @(posedge clk) #1;
-      run = 0;
+      s_valid = 1;
+      s_wstrb = 4'h0;
 
-      valid = 1;
       for (i=0; i < TEST_SZ; i=i+1) begin
+         s_addr = i;
          do
             @(posedge clk) #1;
-         while(~ready);
+         while(~s_ready);
 
-         if (rdata != i+seq_ini) begin
-            $display("ERROR: Test failed! At position %d, data=%h and rdata=%h.", i, i+seq_ini, rdata);
+         if (s_rdata != i+seq_ini) begin
+            $display("ERROR: Test failed! At position %d, data=%h and s_rdata=%h.", i, i+seq_ini, s_rdata);
          end
       end
-      valid = 0;
+      s_valid = 0;
 
       $display("INFO: Test completed successfully!");
 
@@ -280,27 +141,27 @@ module iob2axi_tb;
        )
    uut
      (
-      .clk      (clk),
-      .rst      (rst),
+      .clk       (clk),
+      .rst       (rst),
 
       //
       // Control I/F
       //
-      .run(run),
-      .direction(direction),
-      .length(length),
-      .ready(iob2axi_ready),
-      .error(error),
+      .run       (run),
+      .direction (direction),
+      .addr      (start_addr),
+      .ready     (ready),
+      .error     (error),
 
       //
       // Native slave I/F
       //
-      .s_valid(valid),
-      .s_addr(addr),
-      .s_wdata(wdata),
-      .s_wstrb(wstrb),
-      .s_rdata(rdata),
-      .s_ready(ready),
+      .s_valid (s_valid),
+      .s_addr  (s_addr),
+      .s_wdata (s_wdata),
+      .s_wstrb (s_wstrb),
+      .s_rdata (s_rdata),
+      .s_ready (s_ready),
 
       //
       // AXI-4 full master I/F

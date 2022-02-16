@@ -85,18 +85,25 @@ module iob2axi_wr
    // Write response
    assign m_axi_bready = m_axi_bready_int;
 
+   // Delay register
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         s_ready <= 1'b0;
+      end else begin
+         s_ready <= s_ready_int;
+      end
+   end
+
    // Counter, error and ready registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          counter <= `AXI_LEN_W'd0;
          error <= 1'b0;
          ready <= 1'b1;
-         s_ready <= 1'b0;
       end else begin
          counter <= counter_nxt;
          error <= error_nxt;
          ready <= ready_nxt;
-         s_ready <= s_ready_int;
       end
    end
 
@@ -168,12 +175,12 @@ module iob2axi_wr
         end
         // Write data
         WRITE: begin
-           s_ready_int = m_axi_wready;
+           s_ready_int = s_valid & m_axi_wready;
 
            m_axi_awvalid_int = awvalid_int;
            m_axi_wvalid_int = s_valid;
 
-           if (m_axi_wready & s_valid) begin
+           if (s_valid & m_axi_wready) begin
               if (counter == length_reg) begin
                  m_axi_wlast_int = 1'b1;
                  state_nxt = W_RESPONSE;
