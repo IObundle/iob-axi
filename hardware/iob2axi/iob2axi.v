@@ -12,12 +12,7 @@ module iob2axi
     parameter AXI_DATA_W = DATA_W
     )
    (
-    input                  clk,
-    input                  rst,
-
-    //
     // Control I/F
-    //
     //input                  run,
     input                  direction, // 0 for reading, 1 for writing
     input [AXI_ADDR_W-1:0] addr,
@@ -35,10 +30,9 @@ module iob2axi
     output [DATA_W-1:0]    s_rdata,
     output                 s_ready,
 
-    //
     // AXI-4 Full Master I/F
-    //
-    `AXI4_M_IF_PORT(m_)
+`include "axil_m_port"
+`include "gen_if.vh"
     );
 
    wire                    run_rd, run_wr;

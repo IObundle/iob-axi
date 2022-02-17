@@ -14,7 +14,7 @@ module iob2axil #
     //
     // AXI-4 lite master interface
     //
-    `AXI4_LITE_M_IF_PORT(m_),
+`include "iob2axil_axil_port.vh"
 
     //
     // Native slave interface
@@ -27,29 +27,29 @@ module iob2axil #
     output                       ready
     );
 
-   assign m_axil_awaddr  = addr;
-   assign m_axil_araddr  = addr;
-   assign m_axil_wdata   = wdata;
-   assign m_axil_wstrb   = wstrb;
+   assign axil_awaddr  = addr;
+   assign axil_araddr  = addr;
+   assign axil_wdata   = wdata;
+   assign axil_wstrb   = wstrb;
 
    // AXI IDs
-   assign m_axil_awid = `AXI_ID_W'd0;
-   assign m_axil_wid  = `AXI_ID_W'd0;
-   assign m_axil_arid = `AXI_ID_W'd0;
+   assign axil_awid = `AXI_ID_W'd0;
+   assign axil_wid  = `AXI_ID_W'd0;
+   assign axil_arid = `AXI_ID_W'd0;
 
    // Protection types
-   assign m_axil_awprot = `AXI_PROT_W'd2;
-   assign m_axil_arprot = `AXI_PROT_W'd2;
+   assign axil_awprot = `AXI_PROT_W'd2;
+   assign axil_arprot = `AXI_PROT_W'd2;
 
    // Quality of services
-   assign m_axil_awqos = `AXI_QOS_W'd0;
-   assign m_axil_arqos = `AXI_QOS_W'd0;
+   assign axil_awqos = `AXI_QOS_W'd0;
+   assign axil_arqos = `AXI_QOS_W'd0;
 
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          rdata <= {AXIL_DATA_W{1'b0}};
       end else begin
-         rdata <= m_axil_rdata;
+         rdata <= axil_rdata;
       end
    end
 
@@ -67,55 +67,55 @@ module iob2axil #
    end
 
    reg                           awvalid_ack;
-   assign m_axil_awvalid = (wr | wr_reg) & ~awvalid_ack;
+   assign axil_awvalid = (wr | wr_reg) & ~awvalid_ack;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          awvalid_ack <= 1'b0;
-      end else if (m_axil_awvalid & m_axil_awready) begin
+      end else if (axil_awvalid & axil_awready) begin
          awvalid_ack <= 1'b1;
-      end else if (m_axil_bvalid) begin
+      end else if (axil_bvalid) begin
          awvalid_ack <= 1'b0;
       end
    end
 
    reg                           wvalid_ack;
-   assign m_axil_wvalid = (wr | wr_reg)  & ~wvalid_ack;
+   assign axil_wvalid = (wr | wr_reg)  & ~wvalid_ack;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          wvalid_ack <= 1'b0;
-      end else if (m_axil_wvalid & m_axil_wready) begin
+      end else if (axil_wvalid & axil_wready) begin
          wvalid_ack <= 1'b1;
       end else begin
          wvalid_ack <= 1'b0;
       end
    end
 
-   assign m_axil_bready = 1'b1;
+   assign axil_bready = 1'b1;
 
    reg                           arvalid_ack;
-   assign m_axil_arvalid = (rd | rd_reg) & ~arvalid_ack;
+   assign axil_arvalid = (rd | rd_reg) & ~arvalid_ack;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          arvalid_ack <= 1'b0;
-      end else if (m_axil_arvalid & m_axil_arready) begin
+      end else if (axil_arvalid & axil_arready) begin
          arvalid_ack <= 1'b1;
-      end else if (m_axil_rvalid) begin
+      end else if (axil_rvalid) begin
          arvalid_ack <= 1'b0;
       end
    end
 
    reg                           rready_ack;
-   assign m_axil_rready = (rd | rd_reg) & ~rready_ack;
+   assign axil_rready = (rd | rd_reg) & ~rready_ack;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          rready_ack <= 1'b0;
-      end else if (m_axil_rvalid & m_axil_rready) begin
+      end else if (axil_rvalid & axil_rready) begin
          rready_ack <= 1'b1;
       end else begin
          rready_ack <= 1'b0;
       end
    end
 
-   assign ready = m_axil_bvalid | rready_ack;
+   assign ready = axil_bvalid | rready_ack;
 
 endmodule
