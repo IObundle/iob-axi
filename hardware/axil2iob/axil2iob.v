@@ -2,11 +2,11 @@
 
 `include "axi.vh"
 
-module axil2iob #
-  (
-   parameter AXIL_ADDR_W = 32, // Width of address bus in bits
-   parameter AXIL_DATA_W = 32  // Width of data bus in bits
-   )
+module axil2iob
+  #(
+    parameter AXIL_ADDR_W = 32, // Width of address bus in bits
+    parameter AXIL_DATA_W = 32  // Width of data bus in bits
+    )
    (
     // AXI-4 lite slave interface
 `include "axil_s_port.vh"

@@ -118,11 +118,11 @@ def tbsignal(direction):
         
 def axi_m_port():
     for i in range(len(axi_m)):
-        fout.write(axi_m[i][0]+axi_m[i][2]+', '+str(int(axi_m[i][1]))+'), //'+axi_m[i][3]+'\n')
+        fout.write(' '+axi_m[i][0]+axi_m[i][2]+', '+str(int(axi_m[i][1]))+'), //'+axi_m[i][3]+'\n')
     
 def axi_s_port():
     for i in range(len(axi_m)):
-        fout.write(reverse(axi_m[i][0])+axi_m[i][2]+', '+str(int(axi_m[i][1]))+'), //'+axi_m[i][3]+'\n')
+        fout.write(' '+reverse(axi_m[i][0])+axi_m[i][2]+', '+str(int(axi_m[i][1]))+'), //'+axi_m[i][3]+'\n')
 
 
 def axi_portmap(prefix):
@@ -146,11 +146,11 @@ def axi_wire(prefix):
 
 def axil_m_port():
     for i in range(len(axil_m)):
-        fout.write(axil_m[i][0]+axil_m[i][2]+', '+str(int(axil_m[i][1]))+'), //'+axil_m[i][3]+'\n')
+        fout.write(' '+axil_m[i][0]+axil_m[i][2]+', '+str(int(axil_m[i][1]))+'), //'+axil_m[i][3]+'\n')
     
 def axil_s_port():
     for i in range(len(axil_m)):
-        fout.write(reverse(axil_m[i][0])+axil_m[i][2]+', '+str(int(axil_m[i][1]))+'), //'+axil_m[i][3]+'\n')
+        fout.write(' '+reverse(axil_m[i][0])+axil_m[i][2]+', '+str(int(axil_m[i][1]))+'), //'+axil_m[i][3]+'\n')
 
 
 def axil_portmap(prefix):
