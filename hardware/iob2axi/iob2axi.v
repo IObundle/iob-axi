@@ -40,6 +40,9 @@ module iob2axi
     `AXI4_M_IF_PORT(m_)
     );
 
+   wire                  run_int;
+   wire                  run_wr, run_rd;
+   wire                  ready_int;
    wire                  ready_rd, ready_wr;
    wire                  error_rd, error_wr;
 
@@ -47,12 +50,11 @@ module iob2axi
 
    wire                  rd_valid, wr_valid;
    wire [ADDR_W-1:0]     rd_addr, wr_addr; //**
-   wire [DATA_W-1:0]     wr_wdata;
-   wire [DATA_W/8-1:0]   wr_wstrb;
-   wire [DATA_W-1:0]     rd_rdata;
+   wire [DATA_W-1:0]     rd_wdata, wr_rdata;
+   wire [DATA_W/8-1:0]   rd_wstrb, wr_rstrb;
    wire                  rd_ready, wr_ready;
 
-   assign ready = ready_wr & ready_rd;
+   assign ready = ready_int & ~run_int;
    assign error = error_rd | error_wr;
 
    assign s_ready = |s_wstrb? in_fifo_ready: out_fifo_ready;
@@ -60,46 +62,35 @@ module iob2axi
    //
    // Input FIFO
    //
-   wire                       wr_valid_int;
-
    wire                       in_fifo_full;
    wire                       in_fifo_wr = s_valid & |s_wstrb & ~in_fifo_full;
    wire [DATA_W+DATA_W/8-1:0] in_fifo_wdata = {s_wdata, s_wstrb};
 
    wire                       in_fifo_empty;
-   wire                       in_fifo_rd = wr_valid_int & ~hold_wr & ~m_axi_wlast;
+   wire                       in_fifo_rd = wr_valid;
    wire [DATA_W+DATA_W/8-1:0] in_fifo_rdata;
 
    wire [`AXI_LEN_W:0]        in_fifo_level;
 
-   wire [DATA_W-1:0]          wr_wdata_int = in_fifo_rdata[DATA_W/8 +: DATA_W];
-   wire [DATA_W/8-1:0]        wr_wstrb_int = in_fifo_rdata[0 +: DATA_W/8];
-   reg [DATA_W-1:0]           wr_wdata_reg;
-   reg [DATA_W/8-1:0]         wr_wstrb_reg;
+   reg                        in_fifo_empty_reg;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         wr_wdata_reg <= {DATA_W{1'b0}};
-         wr_wstrb_reg <= {(DATA_W/8){1'b0}};
-      end else if (~hold_wr) begin
-         wr_wdata_reg <= wr_wdata_int;
-         wr_wstrb_reg <= wr_wstrb_int;
+         in_fifo_empty_reg <= 1'b1;
+      end else begin
+         in_fifo_empty_reg <= in_fifo_empty;
       end
    end
 
-   assign wr_valid_int = ~ready_wr & ~in_fifo_empty;
-   assign wr_valid = wr_valid_reg;
-   assign wr_wdata = hold_wr? wr_wdata_reg: wr_wdata_int;
-   assign wr_wstrb = hold_wr? wr_wstrb_reg: wr_wstrb_int;
+   assign wr_rdata = in_fifo_rdata[DATA_W/8 +: DATA_W];
+   assign wr_rstrb = in_fifo_rdata[0 +: DATA_W/8];
 
-   reg                        wr_valid_reg, wr_valid_reg2;
-   wire                       hold_wr = wr_valid_reg2 & ~wr_ready;
+   reg                        wr_ready_int;
+   assign wr_ready = wr_ready_int & ~in_fifo_empty_reg;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         wr_valid_reg <= 1'b0;
-         wr_valid_reg2 <= 1'b0;
+         wr_ready_int <= 1'b0;
       end else begin
-         wr_valid_reg <= wr_valid_int;
-         wr_valid_reg2 <= wr_valid_reg;
+         wr_ready_int <= wr_valid;
       end
    end
 
@@ -139,21 +130,39 @@ module iob2axi
    // Output FIFO
    //
    wire                  out_fifo_full;
-   wire                  out_fifo_wr = rd_ready;
-   wire [DATA_W-1:0]     out_fifo_wdata = rd_rdata;
+   wire                  out_fifo_wr = rd_valid & |rd_wstrb & ~out_fifo_full;
+   wire [DATA_W-1:0]     out_fifo_wdata = rd_wdata;
 
    wire                  out_fifo_empty;
    wire                  out_fifo_rd = s_valid & ~|s_wstrb & ~out_fifo_empty;
    wire [DATA_W-1:0]     out_fifo_rdata;
 
    wire [`AXI_LEN_W:0]   out_fifo_level;
+   wire [`AXI_LEN_W:0]   out_fifo_capacity = {1'b1, `AXI_LEN_W'd0} - out_fifo_level;
 
-   assign rd_valid = ~out_fifo_full;
+   reg                   out_fifo_empty_reg;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         out_fifo_empty_reg <= 1'b1;
+      end else begin
+         out_fifo_empty_reg <= out_fifo_empty;
+      end
+   end
+
+   reg                   rd_ready_int;
+   assign rd_ready = rd_ready_int & ~out_fifo_full;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         rd_ready_int <= 1'b0;
+      end else begin
+         rd_ready_int <= rd_valid;
+      end
+   end
 
    assign s_rdata = out_fifo_rdata;
 
    reg                   out_fifo_ready_int;
-   assign out_fifo_ready = out_fifo_ready_int & ~out_fifo_empty;
+   assign out_fifo_ready = out_fifo_ready_int & ~out_fifo_empty_reg;
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          out_fifo_ready_int <= 1'b0;
@@ -187,14 +196,16 @@ module iob2axi
    //
    // Compute next run
    //
-   wire [`AXI_LEN_W:0]   length_int = direction? in_fifo_level: out_fifo_level;
+   wire [`AXI_LEN_W:0]   length_int = direction? in_fifo_level: out_fifo_capacity;
 
    reg [`AXI_LEN_W-1:0]  count;
    wire                  count_en = ~&count & |length_int;
 
-   wire                  run_int = ready & (length_int[`AXI_LEN_W] | &count);
-   wire                  run_wr = direction? run_int: 1'b0;
-   wire                  run_rd = direction? 1'b0: run_int;
+   assign run_int = ready_int & |length_int & (length_int[`AXI_LEN_W] | &count);
+   assign run_wr  = direction? run_int: 1'b0;
+   assign run_rd  = direction? 1'b0: run_int;
+
+   assign ready_int = ready_wr & ready_rd;
 
    always @(posedge clk, posedge rst) begin
       if (rst) begin
@@ -258,11 +269,12 @@ module iob2axi
       .ready  (ready_rd),
       .error  (error_rd),
 
-      // Native Slave I/F
-      .s_valid (rd_valid),
-      .s_addr  (rd_addr),
-      .s_rdata (rd_rdata),
-      .s_ready (rd_ready),
+      // Native Master Write I/F
+      .m_valid (rd_valid),
+      .m_addr  (rd_addr),
+      .m_wdata (rd_wdata),
+      .m_wstrb (rd_wstrb),
+      .m_ready (rd_ready),
 
       // AXI-4 full read master I/F
       `AXI4_READ_IF_PORTMAP(m_, m_)
@@ -288,12 +300,12 @@ module iob2axi
       .ready   (ready_wr),
       .error   (error_wr),
 
-      // Native Slave I/F
-      .s_valid (wr_valid),
-      .s_addr  (wr_addr),
-      .s_wdata (wr_wdata),
-      .s_wstrb (wr_wstrb),
-      .s_ready (wr_ready),
+      // Native Master Read I/F
+      .m_valid (wr_valid),
+      .m_addr  (wr_addr),
+      .m_rdata (wr_rdata),
+      .m_rstrb (wr_rstrb),
+      .m_ready (wr_ready),
 
       // AXI-4 full write master I/F
       `AXI4_WRITE_IF_PORTMAP(m_, m_)

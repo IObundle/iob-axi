@@ -11,25 +11,26 @@ module iob2axi_rd
     parameter AXI_DATA_W = DATA_W
     )
    (
-    input                   clk,
-    input                   rst,
+    input                  clk,
+    input                  rst,
 
     //
     // Control I/F
     //
-    input                   run,
-    input [ADDR_W-1:0]      addr,
-    input [`AXI_LEN_W-1:0]  length,
-    output reg              ready,
-    output reg              error,
+    input                  run,
+    input [ADDR_W-1:0]     addr,
+    input [`AXI_LEN_W-1:0] length,
+    output reg             ready,
+    output reg             error,
 
     //
-    // Native Slave Read I/F
+    // Native Master Write I/F
     //
-    input                   s_valid,
-    input [ADDR_W-1:0]      s_addr,
-    output reg [DATA_W-1:0] s_rdata,
-    output reg              s_ready,
+    output reg             m_valid,
+    output [ADDR_W-1:0]    m_addr,
+    output [DATA_W-1:0]    m_wdata,
+    output [DATA_W/8-1:0]  m_wstrb,
+    input                  m_ready,
 
     //
     // AXI-4 Full Master Read I/F
@@ -44,11 +45,9 @@ module iob2axi_rd
    // State signals
    reg                      state, state_nxt;
 
-   // Counter and error signals
+   // Counter, error and ready register signals
    reg [`AXI_LEN_W-1:0]     counter, counter_nxt;
    reg                      error_nxt;
-
-   // Read ready
    reg                      ready_nxt;
 
    reg                      m_axi_arvalid_int;
@@ -58,13 +57,34 @@ module iob2axi_rd
    reg [ADDR_W-1:0]         addr_reg;
    reg [`AXI_LEN_W-1:0]     length_reg;
 
-   reg                      s_ready_int;
+   // Hold
+   reg                      m_valid_reg;
+   wire                     hold = m_valid_reg & ~m_ready;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         m_valid_reg <= 1'b0;
+      end else begin
+         m_valid_reg <= m_valid;
+      end
+   end
+
+   reg [DATA_W-1:0]         m_axi_rdata_reg;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         m_axi_rdata_reg <= {DATA_W{1'b0}};
+      end else if (~hold) begin
+         m_axi_rdata_reg <= m_axi_rdata;
+      end
+   end
+
+   assign m_wdata = hold? m_axi_rdata_reg: m_axi_rdata;
+   assign m_wstrb = {(DATA_W/8){1'b1}};
 
    // Read address
    assign m_axi_arid    = `AXI_ID_W'd0;
    assign m_axi_arvalid = m_axi_arvalid_int;
-   assign m_axi_araddr  = addr_reg;
-   assign m_axi_arlen   = length_reg;
+   assign m_axi_araddr  = run? addr: addr_reg;
+   assign m_axi_arlen   = run? length: length_reg;
    assign m_axi_arsize  = axi_arsize;
    assign m_axi_arburst = `AXI_BURST_W'd1;
    assign m_axi_arlock  = `AXI_LOCK_W'b0;
@@ -74,17 +94,6 @@ module iob2axi_rd
 
    // Read
    assign m_axi_rready = m_axi_rready_int;
-
-   // Delay registers
-   always @(posedge clk, posedge rst) begin
-      if (rst) begin
-         s_ready <= 1'b0;
-         s_rdata <= {DATA_W{1'd0}};
-      end else begin
-         s_ready <= s_ready_int;
-         s_rdata <= m_axi_rdata;
-      end
-   end
 
    // Counter, error and ready registers
    always @(posedge clk, posedge rst) begin
@@ -104,7 +113,7 @@ module iob2axi_rd
       if (rst) begin
          addr_reg <= {ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
-      end else if (state == ADDR_HS) begin
+      end else if (run) begin
          addr_reg <= addr;
          length_reg <= length;
       end
@@ -144,7 +153,7 @@ module iob2axi_rd
       ready_nxt = 1'b0;
       counter_nxt = counter;
 
-      s_ready_int = 1'b0;
+      m_valid = 1'b0;
 
       m_axi_arvalid_int = 1'b0;
       m_axi_rready_int = 1'b0;
@@ -167,21 +176,19 @@ module iob2axi_rd
         end
         // Read data
         READ: begin
-           s_ready_int = s_valid & m_axi_rvalid;
+           m_valid = m_axi_rvalid;
 
            m_axi_arvalid_int = arvalid_int;
-           m_axi_rready_int = s_valid;
+           m_axi_rready_int = ~hold;
 
-           if (m_axi_rvalid) begin
+           if (~hold & m_axi_rvalid) begin
               if (counter == length_reg) begin
                  error_nxt = ~m_axi_rlast | |m_axi_rresp;
 
                  state_nxt = ADDR_HS;
               end
 
-              if (s_valid) begin
-                 counter_nxt = counter + 1'b1;
-              end
+              counter_nxt = counter + 1'b1;
            end
         end
       endcase

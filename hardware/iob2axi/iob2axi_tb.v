@@ -58,7 +58,7 @@ module iob2axi_tb;
       //
       run = 0;
       start_addr = 0;
-      direction = 0;
+      direction = 1;
 
       s_valid = 0;
       s_addr = 0;
@@ -106,11 +106,15 @@ module iob2axi_tb;
       end
       s_valid = 0;
 
-      repeat(4) @(posedge clk) #1;
+      repeat(20) @(posedge clk) #1;
 
       // Read test
-
       direction = 0;
+      start_addr = 'h8000 - 'd10 - 'd1;
+
+      run = 1;
+      @(posedge clk) #1;
+      run = 0;
 
       s_valid = 1;
       s_wstrb = 4'h0;
@@ -126,6 +130,8 @@ module iob2axi_tb;
          end
       end
       s_valid = 0;
+
+      while(~ready) @(posedge clk) #1;
 
       $display("INFO: Test completed successfully!");
 
