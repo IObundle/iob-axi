@@ -86,7 +86,7 @@ module iob2axi_tb;
       // Write test
 
       direction = 1;
-      start_addr = 'h8000 - 'd10 -'d1;
+      start_addr = 'h8000 - (10*DATA_W/8);
 
       run = 1;
       @(posedge clk) #1;
@@ -110,7 +110,6 @@ module iob2axi_tb;
 
       // Read test
       direction = 0;
-      start_addr = 'h8000 - 'd10 - 'd1;
 
       run = 1;
       @(posedge clk) #1;

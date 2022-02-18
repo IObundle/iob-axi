@@ -220,12 +220,15 @@ module iob2axi
    //
    // Compute first address and burst length for the next data transfer
    //
+   localparam WADDR_W = ADDR_W - $clog2(DATA_W/8); // Word address width
+
    reg [`AXI_LEN_W-1:0]  length_burst;
 
-   reg [ADDR_W-1:0]      addr_int, addr_int_next;
-   wire [ADDR_W-1:0]     addr4k  = {addr_int[ADDR_W-1:12], {12{1'b1}}};
-   wire [ADDR_W-1:0]     addrRem = addr_int + length_int - 1'b1;
-   wire [ADDR_W-1:0]     minAddr = `min(addr4k, addrRem);
+   reg [ADDR_W-1:0]      addr_int;
+   reg [WADDR_W-1:0]     addr_int_next;
+   wire [WADDR_W-1:0]    addr4k  = {addr_int[ADDR_W-1:12], {(12-(ADDR_W-WADDR_W)){1'b1}}};
+   wire [WADDR_W-1:0]    addrRem = addr_int[ADDR_W-1 -: WADDR_W] + length_int - 1'b1;
+   wire [WADDR_W-1:0]    minAddr = `min(addr4k, addrRem);
 
    always @(posedge clk, posedge rst) begin
       if (rst) begin
@@ -233,7 +236,7 @@ module iob2axi
       end else if (run) begin
          addr_int <= addr;
       end else if (run_int) begin
-         addr_int <= addr_int_next;
+         addr_int <= {addr_int_next, {(ADDR_W-WADDR_W){1'b0}}};
       end
    end
 
@@ -241,10 +244,8 @@ module iob2axi
       addr_int_next = minAddr + 1'b1;
 
       if (minAddr == addr4k) begin
-         //addr_int_next = {{addr_int[ADDR_W-1:12] + 1'b1}, {12{1'b0}}};
-         length_burst = addr4k - addr_int - 1'b1;
+         length_burst = addr4k - addr_int[ADDR_W-1 -: WADDR_W];
       end else begin // minAddr == addrRem
-         //addr_int_next = addr_int + length_int;
          length_burst = length_int - 1'b1;
       end
    end
