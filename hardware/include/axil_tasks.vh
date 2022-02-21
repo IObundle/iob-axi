@@ -60,7 +60,7 @@ task read_data_axil;
    reg                          axil_rvalid_int;
 
    begin
-      // Write address
+      // Read address
       axil_araddr  = axilAddress;
       axil_arvalid = 1'b1;
 
