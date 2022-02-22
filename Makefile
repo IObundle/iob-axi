@@ -24,6 +24,9 @@ INCLUDE+=$(incdir)$(LIB_DIR)/hardware/include
 # Headers
 VHDR+=$(LIB_DIR)/hardware/include/iob_lib.vh
 
+VHDR+=ddr_axi_wire.vh \
+m_ddr_axi_portmap.vh
+
 # Sources
 ifneq ($(MODULE_DIR),)
 include $(MODULE_DIR)/hardware.mk
@@ -45,10 +48,16 @@ ifeq ($(MODULE_DIR),)
 endif
 	@echo "\n\nSimulating module $(MODULE_NAME)\n\n"
 
+ddr_axi_wire.vh:
+	$(AXI_GEN) 'ddr_' '' axi_wire AXI_ADDR_W AXI_DATA_W
+
+m_ddr_axi_portmap.vh:
+	$(AXI_GEN) 'm_' 'ddr_' axi_portmap AXI_ADDR_W AXI_DATA_W
+
 waves: uut.vcd
 	gtkwave -a $(MODULE_DIR)/waves.gtkw $< &
 
 clean:
-	@rm -f *# *~ a.out uut.vcd
+	@rm -f *# *~ a.out uut.vcd *.vh
 
 .PHONY: sim waves clean

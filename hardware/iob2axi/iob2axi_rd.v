@@ -24,18 +24,18 @@ module iob2axi_rd
     output reg             error,
 
     //
+    // AXI-4 Full Master Read I/F
+    //
+`include "m_axi_read_m_port.vh"
+
+    //
     // Native Master Write I/F
     //
     output reg             m_valid,
     output [ADDR_W-1:0]    m_addr,
     output [DATA_W-1:0]    m_wdata,
     output [DATA_W/8-1:0]  m_wstrb,
-    input                  m_ready,
-
-    //
-    // AXI-4 Full Master Read I/F
-    //
-    `AXI4_M_READ_IF_PORT(m_)
+    input                  m_ready
     );
 
    localparam axi_arsize = $clog2(DATA_W/8);

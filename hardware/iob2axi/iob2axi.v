@@ -12,9 +12,6 @@ module iob2axi
     parameter AXI_DATA_W = DATA_W
     )
    (
-    input                clk,
-    input                rst,
-
     //
     // Control I/F
     //
@@ -37,7 +34,8 @@ module iob2axi
     //
     // AXI-4 Full Master I/F
     //
-    `AXI4_M_IF_PORT(m_)
+`include "m_axi_m_port.vh"
+`include "gen_if.vh"
     );
 
    wire                  run_int;
@@ -270,15 +268,14 @@ module iob2axi
       .ready  (ready_rd),
       .error  (error_rd),
 
+      // AXI-4 full read master I/F
+`include "m_m_axi_read_portmap.vh"
       // Native Master Write I/F
       .m_valid (rd_valid),
       .m_addr  (rd_addr),
       .m_wdata (rd_wdata),
       .m_wstrb (rd_wstrb),
-      .m_ready (rd_ready),
-
-      // AXI-4 full read master I/F
-      `AXI4_READ_IF_PORTMAP(m_, m_)
+      .m_ready (rd_ready)
       );
 
    //
@@ -301,15 +298,15 @@ module iob2axi
       .ready   (ready_wr),
       .error   (error_wr),
 
+      // AXI-4 full write master I/F
+`include "m_m_axi_write_portmap.vh"
+
       // Native Master Read I/F
       .m_valid (wr_valid),
       .m_addr  (wr_addr),
       .m_rdata (wr_rdata),
       .m_rstrb (wr_rstrb),
-      .m_ready (wr_ready),
-
-      // AXI-4 full write master I/F
-      `AXI4_WRITE_IF_PORTMAP(m_, m_)
+      .m_ready (wr_ready)
       );
 
 endmodule

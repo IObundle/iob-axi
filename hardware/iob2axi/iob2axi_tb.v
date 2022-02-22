@@ -41,7 +41,7 @@ module iob2axi_tb;
    wire               s_ready;
 
    // AXI-4 full master I/F
-   `AXI4_IF_WIRE(ddr_);
+`include "ddr_axi_wire.vh"
 
    // Iterators
    integer            i, seq_ini;
@@ -159,6 +159,11 @@ module iob2axi_tb;
       .error     (error),
 
       //
+      // AXI-4 full master I/F
+      //
+`include "m_ddr_axi_portmap.vh"
+
+      //
       // Native slave I/F
       //
       .s_valid (s_valid),
@@ -166,12 +171,7 @@ module iob2axi_tb;
       .s_wdata (s_wdata),
       .s_wstrb (s_wstrb),
       .s_rdata (s_rdata),
-      .s_ready (s_ready),
-
-      //
-      // AXI-4 full master I/F
-      //
-      `AXI4_IF_PORTMAP(m_, ddr_)
+      .s_ready (s_ready)
       );
 
    axi_ram
