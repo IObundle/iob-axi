@@ -18,24 +18,24 @@ module iob2axi_wr
     // Control I/F
     //
     input                  run,
-    input [AXI_ADDR_W-1:0] addr,
+    input [ADDR_W-1:0]     addr,
     input [`AXI_LEN_W-1:0] length,
     output reg             ready,
     output reg             error,
 
     //
-    // Native Slave I/F
-    //
-    input                  s_valid,
-    input [ADDR_W-1:0]     s_addr,
-    input [DATA_W-1:0]     s_wdata,
-    input [DATA_W/8-1:0]   s_wstrb,
-    output reg             s_ready,
-
-    //
     // AXI-4 Full Master Write I/F
     //
-    `AXI4_M_WRITE_IF_PORT(m_)
+`include "m_axi_write_m_port.vh"
+
+    //
+    // Native Master Read I/F
+    //
+    output reg             m_valid,
+    output [ADDR_W-1:0]    m_addr,
+    input [DATA_W-1:0]     m_rdata,
+    input [DATA_W/8-1:0]   m_rstrb,
+    input                  m_ready
     );
 
    localparam axi_awsize = $clog2(DATA_W/8);
@@ -45,11 +45,9 @@ module iob2axi_wr
    // State signals
    reg [1:0]               state, state_nxt;
 
-   // Counter and error signals
+   // Counter, error and ready register signals
    reg [`AXI_LEN_W:0]      counter, counter_nxt;
    reg                     error_nxt;
-
-   // Write ready
    reg                     ready_nxt;
 
    reg                     m_axi_awvalid_int;
@@ -58,16 +56,14 @@ module iob2axi_wr
    reg                     m_axi_bready_int;
 
    // Control register signals
-   reg [AXI_ADDR_W-1:0]    addr_reg;
+   reg [ADDR_W-1:0]        addr_reg;
    reg [`AXI_LEN_W-1:0]    length_reg;
-
-   reg                     s_ready_int;
 
    // Write address
    assign m_axi_awid    = `AXI_ID_W'd0;
    assign m_axi_awvalid = m_axi_awvalid_int;
-   assign m_axi_awaddr  = addr_reg;
-   assign m_axi_awlen   = length_reg;
+   assign m_axi_awaddr  = run? addr: addr_reg;
+   assign m_axi_awlen   = run? length: length_reg;
    assign m_axi_awsize  = axi_awsize;
    assign m_axi_awburst = `AXI_BURST_W'd1;
    assign m_axi_awlock  = `AXI_LOCK_W'd0;
@@ -78,8 +74,8 @@ module iob2axi_wr
    // Write
    assign m_axi_wid    = `AXI_ID_W'd0;
    assign m_axi_wvalid = m_axi_wvalid_int;
-   assign m_axi_wdata  = s_wdata;
-   assign m_axi_wstrb  = s_wstrb;
+   assign m_axi_wdata  = m_rdata;
+   assign m_axi_wstrb  = m_rstrb;
    assign m_axi_wlast  = m_axi_wlast_int;
 
    // Write response
@@ -91,21 +87,19 @@ module iob2axi_wr
          counter <= `AXI_LEN_W'd0;
          error <= 1'b0;
          ready <= 1'b1;
-         s_ready <= 1'b0;
       end else begin
          counter <= counter_nxt;
          error <= error_nxt;
          ready <= ready_nxt;
-         s_ready <= s_ready_int;
       end
    end
 
    // Control registers
    always @(posedge clk, posedge rst) begin
       if (rst) begin
-         addr_reg <= {AXI_ADDR_W{1'b0}};
+         addr_reg <= {ADDR_W{1'b0}};
          length_reg <= `AXI_LEN_W'd0;
-      end else if (state == ADDR_HS) begin
+      end else if (run) begin
          addr_reg <= addr;
          length_reg <= length;
       end
@@ -113,15 +107,22 @@ module iob2axi_wr
 
    // Compute awvalid
    wire                    rst_valid_int = (state_nxt == ADDR_HS)? 1'b1: 1'b0;
-   reg                     awvalid_int;
+   reg                     awvalid_int, wvalid_int;
 
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          awvalid_int <= 1'b0;
+         wvalid_int <= 1'b0;
       end else if (rst_valid_int) begin
          awvalid_int <= 1'b1;
-      end else if (m_axi_awready) begin
-         awvalid_int <= 1'b0;
+         wvalid_int <= 1'b0;
+      end else begin
+         if (m_axi_awready) begin
+            awvalid_int <= 1'b0;
+         end
+         if (m_ready) begin
+            wvalid_int <= 1'b1;
+         end
       end
    end
 
@@ -146,7 +147,7 @@ module iob2axi_wr
       ready_nxt = 1'b0;
       counter_nxt = counter;
 
-      s_ready_int = 1'b0;
+      m_valid = 1'b0;
 
       m_axi_awvalid_int = 1'b0;
       m_axi_wvalid_int = 1'b0;
@@ -162,19 +163,21 @@ module iob2axi_wr
            if (run) begin
               state_nxt = WRITE;
 
+              m_valid = 1'b1;
               m_axi_awvalid_int = 1'b1;
               ready_nxt = 1'b0;
            end
         end
         // Write data
         WRITE: begin
-           s_ready_int = m_axi_wready;
+           m_valid = m_axi_wready;
 
            m_axi_awvalid_int = awvalid_int;
-           m_axi_wvalid_int = s_valid;
+           m_axi_wvalid_int = m_ready | wvalid_int;
 
-           if (m_axi_wready & s_valid) begin
+           if (m_ready & m_axi_wready) begin
               if (counter == length_reg) begin
+                 m_valid = 1'b0;
                  m_axi_wlast_int = 1'b1;
                  state_nxt = W_RESPONSE;
               end
