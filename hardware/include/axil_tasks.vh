@@ -56,7 +56,7 @@ endtask
 // Read data from AXI-4 lite slave
 task read_data_axil;
    input [AXIL_ADDR_W-1:0]      axilAddress;
-   output reg [AXIL_DATA_W-1:0] axilData;
+   output [AXIL_DATA_W-1:0]     axilData;
    reg                          axil_rvalid_int;
 
    begin
