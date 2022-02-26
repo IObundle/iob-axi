@@ -224,10 +224,11 @@ def main ():
 
     typ = typ.replace("write_","")
     typ = typ.replace("read_","")
-    typ = typ.replace("axil_","axi_")
 
     if (typ.find("m_port")+1 or typ.find("s_port")+1):
         fout.write('  //START_IO_TABLE '+prefix+typ+'\n')
+
+    typ = typ.replace("axil_","axi_")
 
     # call function to generate .vh file
     if (typ.find("portmap")+1): eval(typ+"('"+prefix+"','"+prefix2+"', fout)")
