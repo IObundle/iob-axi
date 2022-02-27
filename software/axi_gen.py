@@ -186,52 +186,54 @@ def axi_wire(prefix, fout):
         except: width = axi_m[i][1];
         fout.write('`WIRE('+prefix+axi_m[i][2]+', '+width+') //'+axi_m[i][3]+'\n')
 
+#
+# Main
+#
+        
 def main ():
 
     # parse command line arguments
-    if len(sys.argv) < 3 or len(sys.argv) > 6:
+    if len(sys.argv) < 4 or len(sys.argv) > 6:
         print(len(sys.argv))
-        print("Usage:  ./axi_gen.py prefix prefix2 typ aw dw")
+        print("Usage:  ./axi_gen.py typ aw dw [port_prefix wire_prefix]")
         quit()
-        
-    if len(sys.argv) > 4:
-        try:
-            ADDR_W = int(sys.argv[4])
-        except:
-            ADDR_W = sys.argv[4]
 
-    if len(sys.argv) > 5:
-        try:
-            DATA_W = int(sys.argv[5])
-        except:
-            DATA_W = sys.argv[5]
+    #axi bus type
+    typ = sys.argv[1]
 
-    prefix = sys.argv[1]
-    prefix2 = sys.argv[2]
-    typ = sys.argv[3]
+    #address width
+    ADDR_W = int(sys.argv[2])
+
+    #data width
+    DATA_W = int(sys.argv[3])
+
+    #port and wire prefix
+    port_prefix = ''
+    wire_prefix = ''
+    if len(sys.argv) > 4: port_prefix = sys.argv[4]
+    if len(sys.argv) > 5: wire_prefix = sys.argv[5]
 
     # open output .vh file
-    fout = open (prefix+prefix2+typ+".vh", 'w')
+    fout = open (port_prefix+wire_prefix+typ+".vh", 'w')
 
     # make AXI bus
     global axi_m
-    if (typ.find("axi_write_")+1): axi_m = make_axi_write(ADDR_W, DATA_W)
-    elif (typ.find("axi_read_")+1): axi_m = make_axi_read(ADDR_W, DATA_W)
-    elif (typ.find("axi_")+1): axi_m = make_axi(ADDR_W, DATA_W)
-    elif (typ.find("axil_write_")+1): axi_m = make_axil_write(ADDR_W, DATA_W)
-    elif (typ.find("axil_read_")+1): axi_m = make_axil_read(ADDR_W, DATA_W)
-    elif (typ.find("axil_")+1): axi_m = make_axil(ADDR_W, DATA_W)
+    if (typ.find("axi_write_")>=0): axi_m = make_axi_write(ADDR_W, DATA_W)
+    elif (typ.find("axi_read_")>=0): axi_m = make_axi_read(ADDR_W, DATA_W)
+    elif (typ.find("axi_")>=0): axi_m = make_axi(ADDR_W, DATA_W)
+    elif (typ.find("axil_write_")>=0): axi_m = make_axil_write(ADDR_W, DATA_W)
+    elif (typ.find("axil_read_")>=0): axi_m = make_axil_read(ADDR_W, DATA_W)
+    elif (typ.find("axil_")>=0): axi_m = make_axil(ADDR_W, DATA_W)
 
     typ = typ.replace("write_","")
     typ = typ.replace("read_","")
 
     if (typ.find("m_port")+1 or typ.find("s_port")+1):
-        fout.write('  //START_IO_TABLE '+prefix+typ+'\n')
+        fout.write('  //START_IO_TABLE '+port_prefix+typ+'\n')
 
-    typ = typ.replace("axil_","axi_")
-
-    # call function to generate .vh file
-    if (typ.find("portmap")+1): eval(typ+"('"+prefix+"','"+prefix2+"', fout)")
-    else: eval(typ+"('"+prefix+"', fout)")
+    # call function func to generate .vh file
+    func = typ.replace("axil_","axi_")
+    if (typ.find("portmap")+1): eval(func+"('"+port_prefix+"','"+wire_prefix+"', fout)")
+    else: eval(func+"('"+port_prefix+"', fout)")
 
 if __name__ == "__main__" : main ()
