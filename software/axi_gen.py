@@ -1,9 +1,8 @@
 #!/usr/bin/python3
 
 #
-# ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]
+# type = [master|slave]_[port|portmap|wire|tb] or [master|slave]_[write|read]_[port|portmap|wire|tb]
 #
-# typ = [master|slave]_[port|portmap|wire|tb] or [master|slave]_[write|read]_[port|portmap|wire|tb]
 
 import sys
 
