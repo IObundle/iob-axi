@@ -49,10 +49,10 @@ endif
 	@echo "\n\nSimulating module $(MODULE_NAME)\n\n"
 
 ddr_axi_wire.vh:
-	$(AXI_GEN) 'ddr_' '' axi_wire AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_wire AXI_ADDR_W AXI_DATA_W 'ddr_'
 
 m_ddr_axi_portmap.vh:
-	$(AXI_GEN) 'm_' 'ddr_' axi_portmap AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_portmap AXI_ADDR_W AXI_DATA_W 'm_' 'ddr_'
 
 waves: uut.vcd
 	gtkwave -a $(MODULE_DIR)/waves.gtkw $< &
