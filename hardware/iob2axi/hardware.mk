@@ -24,18 +24,18 @@ $(AXI_DIR)/hardware/iob2axi/iob2axi_wr.v \
 $(AXI_DIR)/hardware/iob2axi/iob2axi_rd.v
 
 m_axi_m_port.vh:
-	$(AXI_GEN) 'm_' '' axi_m_port AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_m_port AXI_ADDR_W AXI_DATA_W 'm_'
 
 m_axi_write_m_port.vh:
-	$(AXI_GEN) 'm_' '' axi_write_m_port AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_write_m_port AXI_ADDR_W AXI_DATA_W 'm_'
 
 m_axi_read_m_port.vh:
-	$(AXI_GEN) 'm_' '' axi_read_m_port AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_read_m_port AXI_ADDR_W AXI_DATA_W 'm_'
 
 m_m_axi_write_portmap.vh:
-	$(AXI_GEN) 'm_' 'm_' axi_write_portmap AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_write_portmap AXI_ADDR_W AXI_DATA_W 'm_' 'm_'
 
 m_m_axi_read_portmap.vh:
-	$(AXI_GEN) 'm_' 'm_' axi_read_portmap AXI_ADDR_W AXI_DATA_W
+	$(AXI_GEN) axi_read_portmap AXI_ADDR_W AXI_DATA_W 'm_' 'm_'
 
 endif
