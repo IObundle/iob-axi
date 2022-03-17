@@ -92,6 +92,15 @@ module iob2axil #
 
    assign axil_bready = 1'b1;
 
+   reg                           axil_rvalid_reg;
+   always @(posedge clk, posedge rst) begin
+      if (rst) begin
+         axil_rvalid_reg <= 1'b0;
+      end else begin
+         axil_rvalid_reg <= axil_rvalid;
+      end
+   end
+
    reg                           arvalid_ack;
    assign axil_arvalid = (rd | rd_reg) & ~arvalid_ack;
    always @(posedge clk, posedge rst) begin
@@ -99,7 +108,7 @@ module iob2axil #
          arvalid_ack <= 1'b0;
       end else if (axil_arvalid & axil_arready) begin
          arvalid_ack <= 1'b1;
-      end else if (axil_rvalid) begin
+      end else if (axil_rvalid | axil_rvalid_reg) begin
          arvalid_ack <= 1'b0;
       end
    end

@@ -57,7 +57,7 @@ module axil2iob
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          awvalid_ack <= 1'b0;
-      end else if (axil_awvalid) begin
+      end else if (axil_awvalid & ~awvalid_ack) begin
          awvalid_ack <= 1'b1;
       end else if (ready) begin
          awvalid_ack <= 1'b0;
@@ -67,7 +67,7 @@ module axil2iob
    always @(posedge clk, posedge rst) begin
       if (rst) begin
          arvalid_ack <= 1'b0;
-      end else if (axil_arvalid) begin
+      end else if (axil_arvalid & ~arvalid_ack) begin
          arvalid_ack <= 1'b1;
       end else if (ready) begin
          arvalid_ack <= 1'b0;
