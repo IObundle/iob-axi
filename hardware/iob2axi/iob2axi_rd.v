@@ -183,7 +183,7 @@ module iob2axi_rd
 
            if (~hold & m_axi_rvalid) begin
               if (counter == length_reg) begin
-                 error_nxt = ~m_axi_rlast | |m_axi_rresp;
+                 error_nxt = |{~m_axi_rlast, m_axi_rresp};
 
                  state_nxt = ADDR_HS;
               end
