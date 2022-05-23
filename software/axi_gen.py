@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 #
 # type = [master|slave]_[port|portmap|wire|tb] or [master|slave]_[write|read]_[port|portmap|wire|tb]
