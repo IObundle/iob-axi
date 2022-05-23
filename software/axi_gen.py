@@ -2,7 +2,7 @@
 
 # Generates AXI4 and AXI$ Lite ports, port maps and signals:
 #
-# ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]")
+# ./axi_gen.py type addr_w data_w [file_prefix port_prefix wire_prefix]")
 #
 #     type = [axi_port_m|axi_port_s|axi_portmap|axi_wire|axi_m_tb|axi_s_tb]
 #
@@ -197,7 +197,7 @@ def main ():
     # parse command line arguments
     if len(sys.argv) < 4 or len(sys.argv) > 6:
         print(len(sys.argv))
-        print("Usage: ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]")
+        print("Usage: ./axi_gen.py type addr_w data_w [file_prefix port_prefix wire_prefix]")
         quit()
 
     #axi bus type
@@ -210,13 +210,15 @@ def main ():
     DATA_W = sys.argv[3]
 
     #port and wire prefix
+    file_prefix = ''
     port_prefix = ''
     wire_prefix = ''
-    if len(sys.argv) > 4: port_prefix = sys.argv[4]
-    if len(sys.argv) > 5: wire_prefix = sys.argv[5]
+    if len(sys.argv) > 4: file_prefix = sys.argv[4]
+    if len(sys.argv) > 5: port_prefix = sys.argv[5]
+    if len(sys.argv) > 6: wire_prefix = sys.argv[6]
 
     # open output .vh file
-    fout = open (port_prefix+wire_prefix+typ+".vh", 'w')
+    fout = open (file_prefix+typ+".vh", 'w')
 
     # make AXI bus
     global axi_m
