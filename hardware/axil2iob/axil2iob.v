@@ -18,7 +18,7 @@ module axil2iob
     output [AXIL_DATA_W/8-1:0] wstrb,
     input [AXIL_DATA_W-1:0]    rdata,
     input                      ready,
-`include "gen_if.vh"
+`include "iob_gen_if.vh"
     );
 
    reg                         awvalid_ack;

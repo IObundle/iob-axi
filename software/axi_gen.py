@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
+# Generates AXI4 and AXI$ Lite ports, port maps and signals:
 #
-# type = [master|slave]_[port|portmap|wire|tb] or [master|slave]_[write|read]_[port|portmap|wire|tb]
+# ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]")
+#
+#     type = [axi_port_m|axi_port_s|axi_portmap|axi_wire|axi_m_tb|axi_s_tb]
 #
 
 import sys
@@ -194,7 +197,7 @@ def main ():
     # parse command line arguments
     if len(sys.argv) < 4 or len(sys.argv) > 6:
         print(len(sys.argv))
-        print("Usage:  ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]")
+        print("Usage: ./axi_gen.py type addr_w data_w [port_prefix wire_prefix]")
         quit()
 
     #axi bus type
