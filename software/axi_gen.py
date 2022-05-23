@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 # Generates AXI4 and AXI$ Lite ports, port maps and signals:
 #
