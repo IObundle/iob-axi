@@ -35,7 +35,7 @@ module iob2axi
     // AXI-4 Full Master I/F
     //
 `include "m_axi_m_port.vh"
-`include "gen_if.vh"
+`include "iob_gen_if.vh"
     );
 
    wire                  run_int;
